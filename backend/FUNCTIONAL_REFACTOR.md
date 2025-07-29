@@ -9,6 +9,7 @@ O backend foi completamente refatorado para seguir o **paradigma funcional** usa
 ### **1. Serviços Funcionais**
 
 #### **AuthService**
+
 ```scala
 // ANTES (imperativo + Future)
 def login(email: String, password: String): Future[Option[String]]
@@ -18,12 +19,14 @@ def login(email: String, password: String): ZIO[Any, AuthError, Option[String]]
 ```
 
 **Melhorias:**
+
 - ✅ **Tratamento de erros tipado** com `AuthError`
 - ✅ **Composição funcional** com `for-comprehension`
 - ✅ **Validação pura** sem efeitos colaterais
 - ✅ **Operações atômicas** com ZIO
 
 #### **VocabularyService**
+
 ```scala
 // ANTES (mistura Future/ZIO)
 def createWord(wordData: VocabularyCreate): Future[Vocabulary]
@@ -33,12 +36,14 @@ def createWord(wordData: VocabularyCreate): ZIO[Any, VocabularyError, Vocabulary
 ```
 
 **Melhorias:**
+
 - ✅ **Validação funcional** com `validateVocabularyData`
 - ✅ **Streams funcionais** com `ZStream`
 - ✅ **Composição de efeitos** sem `Unsafe.unsafe`
 - ✅ **Tratamento granular de erros**
 
 #### **OpenAIService**
+
 ```scala
 // ANTES (imperativo com mocks)
 private def callOpenAI(request: OpenAIRequest): ZIO[Any, Throwable, OpenAIResponse]
@@ -49,6 +54,7 @@ private def extractResponseMessage(...): ZIO[Any, OpenAIError, String]
 ```
 
 **Melhorias:**
+
 - ✅ **Pipeline funcional** de processamento
 - ✅ **Composição de transformações**
 - ✅ **Erros específicos** (`APIError`, `NetworkError`)
@@ -57,6 +63,7 @@ private def extractResponseMessage(...): ZIO[Any, OpenAIError, String]
 ### **2. Repositórios Funcionais**
 
 #### **UserRepository**
+
 ```scala
 // ANTES (try/catch + ZIO wrapper)
 val effect = ZIO.attempt { ... }.catchAll { _ => ZIO.succeed(None) }
@@ -66,6 +73,7 @@ def create(user: User): ZIO[Any, DatabaseError, Option[User]]
 ```
 
 **Melhorias:**
+
 - ✅ **Interface trait** para testabilidade
 - ✅ **Erros específicos** de banco (`ConnectionError`, `QueryError`)
 - ✅ **Operações atômicas** com transações
@@ -74,6 +82,7 @@ def create(user: User): ZIO[Any, DatabaseError, Option[User]]
 ### **3. Controladores Funcionais**
 
 #### **AuthController**
+
 ```scala
 // ANTES (Future + recover)
 authService.register(registration).map { ... }.recover { ... }
@@ -85,6 +94,7 @@ authService.register(registration)
 ```
 
 **Melhorias:**
+
 - ✅ **Pattern matching** em erros
 - ✅ **Composição declarativa**
 - ✅ **Tratamento específico** por tipo de erro
@@ -93,26 +103,31 @@ authService.register(registration)
 ## 🧬 Princípios Funcionais Aplicados
 
 ### **Imutabilidade**
+
 - ✅ Case classes imutáveis
 - ✅ Transformações com `copy()`
 - ✅ Streams imutáveis com `ZStream`
 
 ### **Composição**
+
 - ✅ `for-comprehension` para sequenciar efeitos
 - ✅ `map`/`flatMap` para transformações
 - ✅ `catchAll` para tratamento de erros
 
 ### **Transparência Referencial**
+
 - ✅ Funções puras sem efeitos colaterais
 - ✅ Efeitos encapsulados em ZIO
 - ✅ Operações determinísticas
 
 ### **Tratamento de Erros**
+
 - ✅ Tipos de erro específicos (`sealed trait`)
 - ✅ Propagação automática de erros
 - ✅ Recuperação funcional com `catchAll`
 
 ### **Lazy Evaluation**
+
 - ✅ ZIO lazy por padrão
 - ✅ Streams com processamento lazy
 - ✅ Computações sob demanda
@@ -120,18 +135,21 @@ authService.register(registration)
 ## 🎭 Atores Funcionais (Pekko)
 
 ### **LearningSessionActor**
+
 ```scala
 // Gerenciamento de estado funcional
 private def learningSession(sessions: Map[Long, SessionState]): Behavior[Command]
 ```
 
 ### **ConversationActor**
+
 ```scala
 // Composição de comportamentos
 private def conversationManager(conversations: Map[Long, ActiveConversation], ...): Behavior[Command]
 ```
 
 **Características:**
+
 - ✅ **Estado imutável** em Map
 - ✅ **Transformações funcionais** do estado
 - ✅ **Pattern matching** em mensagens
@@ -140,11 +158,13 @@ private def conversationManager(conversations: Map[Long, ActiveConversation], ..
 ## 🔄 Streams Funcionais (Pekko)
 
 ### **VocabularyStreamService**
+
 ```scala
 def vocabularyRecommendationFlow(userLevel: String): Flow[UserVocabularyProgress, Vocabulary, NotUsed]
 ```
 
 **Características:**
+
 - ✅ **Processamento pipeline**
 - ✅ **Transformações funcionais**
 - ✅ **Backpressure automático**
@@ -153,21 +173,25 @@ def vocabularyRecommendationFlow(userLevel: String): Flow[UserVocabularyProgress
 ## 📈 Benefícios Alcançados
 
 ### **Manutenibilidade**
+
 - 🎯 Código mais previsível
 - 🎯 Efeitos explícitos
 - 🎯 Testabilidade melhorada
 
 ### **Robustez**
+
 - 🛡️ Tratamento de erros tipado
 - 🛡️ Impossibilidade de null pointers
 - 🛡️ Composição segura
 
 ### **Performance**
+
 - ⚡ Lazy evaluation
 - ⚡ Recursos gerenciados automaticamente
 - ⚡ Concorrência sem locks
 
 ### **Expressividade**
+
 - 📝 Código mais declarativo
 - 📝 Intenção clara
 - 📝 Menos boilerplate
