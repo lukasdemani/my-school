@@ -1,0 +1,51 @@
+# Routes
+
+# This file defines all application routes (Higher priority routes first)
+
+# Health check
+
+GET /health controllers.HealthController.health
+
+# Authentication
+
+POST /api/auth/register controllers.AuthController.register
+POST /api/auth/login controllers.AuthController.login
+POST /api/auth/refresh controllers.AuthController.refreshToken
+
+# User management
+
+GET /api/users/profile controllers.UserController.getProfile
+PUT /api/users/profile controllers.UserController.updateProfile
+GET /api/users/progress controllers.UserController.getProgress
+
+# Vocabulary
+
+GET /api/vocabulary controllers.VocabularyController.getVocabulary
+POST /api/vocabulary controllers.VocabularyController.createWord
+GET /api/vocabulary/:id controllers.VocabularyController.getWord(id: Long)
+PUT /api/vocabulary/:id controllers.VocabularyController.updateWord(id: Long)
+DELETE /api/vocabulary/:id controllers.VocabularyController.deleteWord(id: Long)
+
+# Lessons
+
+GET /api/lessons controllers.LessonController.getLessons
+GET /api/lessons/:id controllers.LessonController.getLesson(id: Long)
+POST /api/lessons/:id/complete controllers.LessonController.completeLesson(id: Long)
+
+# Practice
+
+POST /api/practice/vocabulary controllers.PracticeController.practiceVocabulary
+POST /api/practice/grammar controllers.PracticeController.practiceGrammar
+POST /api/practice/conversation controllers.PracticeController.conversationPractice
+
+# AI Integration
+
+POST /api/ai/chat controllers.AIController.chat
+POST /api/ai/translate controllers.AIController.translate
+POST /api/ai/explain controllers.AIController.explainGrammar
+
+# Statistics
+
+GET /api/stats/overview controllers.StatsController.getOverview
+GET /api/stats/vocabulary controllers.StatsController.getVocabularyStats
+GET /api/stats/lessons controllers.StatsController.getLessonStats
