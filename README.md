@@ -1,24 +1,88 @@
 # 🇩🇪 German Learning App
 
-Um aplicativo iOS completo para aprendizado de alemão, construído com React Native e backend em Scala.
+Um aplicativo iOS completo para aprendizado de alemão com arquitetura moderna e separação clara entre frontend e backend.
 
 ## 📱 Funcionalidades
 
-- **Vocabulário**: Aprenda novas palavras com flashcards inteligentes
-- **Gramática**: Exercícios interativos de gramática alemã
-- **Conversação**: Prática com IA usando LLM integration
-- **Progresso**: Acompanhe seu desenvolvimento
-- **Pronúncia**: Exercícios de speaking e listening
+- **Learning Journey Segmentada**: Progressão por níveis CEFR (A1-C2)
+- **Teste de Proficiência**: Assessment adaptativo para determinar nível
+- **Personalização por Interesses**: Conteúdo baseado em hobbies e preferências
+- **Vocabulário Inteligente**: Flashcards com spaced repetition
+- **Conversação com IA**: Prática conversacional usando OpenAI
+- **Gamificação**: XP, badges e streaks para motivação
 
 ## 🏗️ Arquitetura
 
 ```
 my-school/
-├── mobile/          # React Native app (iOS)
-├── backend/         # Scala backend (Play Framework)
-├── shared/          # Modelos e tipos compartilhados
-└── docs/            # Documentação
+├── mobile/          # 📱 Frontend React Native + Expo
+│   ├── src/         # Código TypeScript
+│   ├── assets/      # Recursos estáticos
+│   └── package.json # Dependências mobile
+├── backend/         # ⚙️  Backend Scala + Play Framework
+│   ├── app/         # Código Scala com ZIO + Pekko
+│   ├── conf/        # Configurações
+│   └── build.sbt    # Dependências Scala
+├── shared/          # 🔗 Tipos e modelos compartilhados
+└── docs/            # 📚 Documentação
 ```
+
+## 🚀 Como Executar
+
+### 📱 **Frontend (Mobile)**
+```bash
+cd mobile
+npm install
+npm start
+```
+
+### ⚙️ **Backend (Scala)**
+```bash
+cd backend
+sbt compile
+sbt run
+```
+
+## 🛠️ **Stack Tecnológica**
+
+### **Frontend (mobile/)**
+- **React Native** 0.74.5 + **Expo** 51.0.28
+- **TypeScript** 5.3.3 (strict mode)
+- **Redux Toolkit** 2.2.7 + **React Query** 5.59.0
+- **React Navigation** 6.1.18
+- **Zod** 3.23.8 para validação
+
+### **Backend (backend/)**
+- **Scala** 3.3.1 + **Play Framework**
+- **ZIO** para programação funcional
+- **Apache Pekko** (Akka successor) para actors
+- **PostgreSQL** com repositories custom
+- **OpenAI API** para conversação
+
+## 📁 **Separação de Responsabilidades**
+
+### **Frontend (`mobile/`)** 
+- Interface do usuário React Native
+- State management com Redux
+- Navegação e UX
+- Cache local com AsyncStorage
+- Tipos TypeScript para UI
+
+### **Backend (`backend/`)** 
+- APIs RESTful
+- Lógica de negócio em Scala
+- Integração com banco de dados
+- Processamento de IA
+- Autenticação JWT
+
+### **Shared (`shared/`)**
+- Modelos de dados compartilhados
+- Tipos de API contracts
+- Utilitários comum
+
+---
+
+**⚠️ Importante**: Cada parte do projeto tem seu próprio `package.json`/`build.sbt` e deve ser executada independentemente.
 
 ## 🚀 Tecnologias
 

@@ -1,0 +1,30 @@
+# Root level - should be minimal
+node_modules/
+.DS_Store
+*.log
+.env
+.env.local
+
+# Expo (should only be in mobile/)
+.expo/
+expo-env.d.ts
+
+# Backend specific (should only be in backend/)
+target/
+.bsp/
+.metals/
+project/target/
+project/project/
+*.class
+*.jar
+
+# Mobile specific (should only be in mobile/)
+*.apk
+*.ipa
+*.aab
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

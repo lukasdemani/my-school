@@ -6,6 +6,7 @@ import { Text, View } from 'react-native';
 
 // Import real screens
 import { OnboardingScreen } from '@/screens/onboarding/OnboardingScreen';
+import { AuthScreen } from '@/screens/auth/AuthScreen';
 
 // Placeholder screens (will create proper components next)
 const DashboardScreen = () => (
@@ -35,12 +36,6 @@ const ProgressScreen = () => (
 const ProfileScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <Text>Profile Screen</Text>
-  </View>
-);
-
-const AuthScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Auth Screen</Text>
   </View>
 );
 
