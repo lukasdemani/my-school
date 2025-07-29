@@ -1,0 +1,9 @@
+{
+  "name": "my-school",
+  "private": true,
+  "workspaces": [
+    "mobile",
+    "backend",
+    "shared"
+  ]
+}
