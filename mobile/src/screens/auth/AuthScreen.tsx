@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  StatusBar,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { useAppDispatch } from '@/hooks/redux';
 import { loginStart, loginSuccess } from '@/store/slices/authSlice';
+import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 export const AuthScreen = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -47,7 +47,7 @@ export const AuthScreen = () => {
 
     try {
       // Simulação de login/registro
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // Mock user data
       const mockUser = {
@@ -67,11 +67,13 @@ export const AuthScreen = () => {
         updatedAt: new Date().toISOString(),
       };
 
-      dispatch(loginSuccess({
-        token: 'mock-jwt-token',
-        refreshToken: 'mock-refresh-token',
-        user: mockUser,
-      }));
+      dispatch(
+        loginSuccess({
+          token: 'mock-jwt-token',
+          refreshToken: 'mock-refresh-token',
+          user: mockUser,
+        })
+      );
 
       navigation.navigate('MainTabs' as never);
     } catch (error) {
@@ -86,15 +88,15 @@ export const AuthScreen = () => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
+      <StatusBar barStyle='dark-content' backgroundColor='#fff' />
+
       <View style={styles.header}>
         <Text style={styles.title}>
           {isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta'}
         </Text>
         <Text style={styles.subtitle}>
-          {isLogin 
-            ? 'Entre para continuar aprendendo alemão' 
+          {isLogin
+            ? 'Entre para continuar aprendendo alemão'
             : 'Comece sua jornada no alemão'}
         </Text>
       </View>
@@ -104,60 +106,61 @@ export const AuthScreen = () => {
           <>
             <TextInput
               style={styles.input}
-              placeholder="Nome"
+              placeholder='Nome'
               value={firstName}
               onChangeText={setFirstName}
-              autoCapitalize="words"
+              autoCapitalize='words'
             />
             <TextInput
               style={styles.input}
-              placeholder="Sobrenome"
+              placeholder='Sobrenome'
               value={lastName}
               onChangeText={setLastName}
-              autoCapitalize="words"
+              autoCapitalize='words'
             />
           </>
         )}
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder='Email'
           value={email}
           onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
+          keyboardType='email-address'
+          autoCapitalize='none'
           autoCorrect={false}
         />
 
         <TextInput
           style={styles.input}
-          placeholder="Senha"
+          placeholder='Senha'
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          autoCapitalize="none"
+          autoCapitalize='none'
         />
 
         {!isLogin && (
           <TextInput
             style={styles.input}
-            placeholder="Confirmar senha"
+            placeholder='Confirmar senha'
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
-            autoCapitalize="none"
+            autoCapitalize='none'
           />
         )}
 
         <TouchableOpacity
-          style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            isLoading && styles.submitButtonDisabled,
+          ]}
           onPress={handleSubmit}
           disabled={isLoading}
         >
           <Text style={styles.submitButtonText}>
-            {isLoading 
-              ? 'Aguarde...' 
-              : (isLogin ? 'Entrar' : 'Criar conta')}
+            {isLoading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar conta'}
           </Text>
         </TouchableOpacity>
 
@@ -166,9 +169,7 @@ export const AuthScreen = () => {
           onPress={() => setIsLogin(!isLogin)}
         >
           <Text style={styles.switchButtonText}>
-            {isLogin 
-              ? 'Não tem conta? Cadastre-se' 
-              : 'Já tem conta? Entre'}
+            {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entre'}
           </Text>
         </TouchableOpacity>
       </View>

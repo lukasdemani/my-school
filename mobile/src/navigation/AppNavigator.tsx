@@ -5,8 +5,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text, View } from 'react-native';
 
 // Import real screens
-import { OnboardingScreen } from '@/screens/onboarding/OnboardingScreen';
 import { AuthScreen } from '@/screens/auth/AuthScreen';
+import { OnboardingScreen } from '@/screens/onboarding/OnboardingScreen';
 
 // Placeholder screens (will create proper components next)
 const DashboardScreen = () => (

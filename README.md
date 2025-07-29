@@ -30,6 +30,7 @@ my-school/
 ## 🚀 Como Executar
 
 ### 📱 **Frontend (Mobile)**
+
 ```bash
 cd mobile
 npm install
@@ -37,6 +38,7 @@ npm start
 ```
 
 ### ⚙️ **Backend (Scala)**
+
 ```bash
 cd backend
 sbt compile
@@ -46,6 +48,7 @@ sbt run
 ## 🛠️ **Stack Tecnológica**
 
 ### **Frontend (mobile/)**
+
 - **React Native** 0.74.5 + **Expo** 51.0.28
 - **TypeScript** 5.3.3 (strict mode)
 - **Redux Toolkit** 2.2.7 + **React Query** 5.59.0
@@ -53,6 +56,7 @@ sbt run
 - **Zod** 3.23.8 para validação
 
 ### **Backend (backend/)**
+
 - **Scala** 3.3.1 + **Play Framework**
 - **ZIO** para programação funcional
 - **Apache Pekko** (Akka successor) para actors
@@ -61,14 +65,16 @@ sbt run
 
 ## 📁 **Separação de Responsabilidades**
 
-### **Frontend (`mobile/`)** 
+### **Frontend (`mobile/`)**
+
 - Interface do usuário React Native
 - State management com Redux
 - Navegação e UX
 - Cache local com AsyncStorage
 - Tipos TypeScript para UI
 
-### **Backend (`backend/`)** 
+### **Backend (`backend/`)**
+
 - APIs RESTful
 - Lógica de negócio em Scala
 - Integração com banco de dados
@@ -76,6 +82,7 @@ sbt run
 - Autenticação JWT
 
 ### **Shared (`shared/`)**
+
 - Modelos de dados compartilhados
 - Tipos de API contracts
 - Utilitários comum
