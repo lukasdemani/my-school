@@ -1,4 +1,4 @@
-export type CEFRLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+export type CEFRLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export type LearningStyle = 'visual' | 'auditory' | 'kinesthetic' | 'reading';
 
@@ -14,6 +14,62 @@ export type InterestCategory =
   | 'science'
   | 'arts';
 
+// Backend API types
+export interface SignUpRequest {
+  name: string;
+  email: string;
+  password: string;
+  nativeLanguage: string;
+  bio?: string;
+  interests?: string;
+}
+
+export interface SignInRequest {
+  email: string;
+  password: string;
+}
+
+export interface CreateWorkspaceRequest {
+  targetLanguage: string;
+  languageLevel: CEFRLevel;
+  name: string;
+  description?: string;
+}
+
+export interface WorkspaceProgressResponse {
+  totalLessonsCompleted: number;
+  totalPoints: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastActivity?: string;
+}
+
+export interface WorkspaceResponse {
+  id: string;
+  targetLanguage: string;
+  languageLevel: CEFRLevel;
+  name: string;
+  description?: string;
+  progress?: WorkspaceProgressResponse;
+}
+
+export interface UserResponse {
+  id: string;
+  name: string;
+  email: string;
+  nativeLanguage: string;
+  bio?: string;
+  interests?: string;
+  workspaces: WorkspaceResponse[];
+}
+
+export interface AuthResponse {
+  user: UserResponse;
+  accessToken: string;
+  refreshToken: string;
+}
+
+// Legacy types for compatibility with existing frontend code
 export interface Interest {
   id: string;
   category: InterestCategory;
