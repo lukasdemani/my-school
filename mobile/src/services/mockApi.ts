@@ -45,8 +45,8 @@ class MockApiService {
 
     // Simulate authentication check
     if (
-      credentials.email === 'test@example.com' &&
-      credentials.password === 'password'
+      credentials.email === 'test@test.com' &&
+      credentials.password === '123'
     ) {
       return {
         user: this.mockUser,

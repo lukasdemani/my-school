@@ -5,7 +5,6 @@ import {
   SignUpRequest,
   UserResponse,
 } from '@/types/user';
-import { mockApiService } from './mockApi';
 
 class ApiService {
   private baseUrl: string;
@@ -57,9 +56,6 @@ class ApiService {
 
   // Authentication endpoints
   async signUp(data: SignUpRequest): Promise<AuthResponse> {
-    if ((config as any).USE_MOCK_API) {
-      return mockApiService.signUp(data);
-    }
     return this.request<AuthResponse>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -67,19 +63,13 @@ class ApiService {
   }
 
   async signIn(data: SignInRequest): Promise<AuthResponse> {
-    if ((config as any).USE_MOCK_API) {
-      return mockApiService.signIn(data);
-    }
-    return this.request<AuthResponse>('/auth/login', {
+    return this.request<AuthResponse>('/auth/signin', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
-    if ((config as any).USE_MOCK_API) {
-      return mockApiService.refreshToken(refreshToken);
-    }
     return this.request<{ accessToken: string }>('/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
@@ -87,9 +77,6 @@ class ApiService {
   }
 
   async logout(): Promise<void> {
-    if ((config as any).USE_MOCK_API) {
-      return mockApiService.logout();
-    }
     return this.request<void>('/auth/logout', {
       method: 'POST',
     });
@@ -97,9 +84,6 @@ class ApiService {
 
   // User endpoints
   async getCurrentUser(): Promise<UserResponse> {
-    if ((config as any).USE_MOCK_API) {
-      return mockApiService.getCurrentUser();
-    }
     return this.request<UserResponse>('/users/profile');
   }
 

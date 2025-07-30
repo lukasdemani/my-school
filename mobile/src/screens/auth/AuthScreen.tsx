@@ -89,57 +89,89 @@ export const AuthScreen = () => {
 
       <View style={styles.header}>
         <Text style={styles.title}>
-          {isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta'}
+          {isLogin ? 'Bem-vindo de volta!' : 'Criar Nova Conta'}
         </Text>
         <Text style={styles.subtitle}>
           {isLogin
-            ? 'Entre para continuar aprendendo alemão'
-            : 'Comece sua jornada no alemão'}
+            ? 'Faça login com seu email e senha para continuar aprendendo alemão'
+            : 'Preencha os dados abaixo para criar sua conta e começar a aprender alemão'}
         </Text>
       </View>
 
       <View style={styles.form}>
         {!isLogin && (
-          <>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Nome Completo *</Text>
+            <Text style={styles.inputHelper}>
+              Como você gostaria de ser chamado no app
+            </Text>
             <TextInput
               style={styles.input}
-              placeholder='Nome completo'
+              placeholder='Digite seu nome completo'
               value={name}
               onChangeText={setName}
               autoCapitalize='words'
             />
-          </>
+          </View>
         )}
 
-        <TextInput
-          style={styles.input}
-          placeholder='Email'
-          value={email}
-          onChangeText={setEmail}
-          keyboardType='email-address'
-          autoCapitalize='none'
-          autoCorrect={false}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder='Senha'
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize='none'
-        />
-
-        {!isLogin && (
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Email *</Text>
+          <Text style={styles.inputHelper}>
+            {isLogin
+              ? 'Use o email cadastrado para fazer login'
+              : 'Este será seu email de acesso ao app'}
+          </Text>
           <TextInput
             style={styles.input}
-            placeholder='Confirmar senha'
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            placeholder='exemplo@email.com'
+            value={email}
+            onChangeText={setEmail}
+            keyboardType='email-address'
+            autoCapitalize='none'
+            autoCorrect={false}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Senha *</Text>
+          <Text style={styles.inputHelper}>
+            {isLogin
+              ? 'Digite sua senha de acesso'
+              : 'Mínimo 6 caracteres para maior segurança'}
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder='Digite sua senha'
+            value={password}
+            onChangeText={setPassword}
             secureTextEntry
             autoCapitalize='none'
           />
+        </View>
+
+        {!isLogin && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Confirmar Senha *</Text>
+            <Text style={styles.inputHelper}>
+              Digite a mesma senha novamente
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder='Confirme sua senha'
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize='none'
+            />
+          </View>
         )}
+
+        <View style={styles.requiredNote}>
+          <Text style={styles.requiredNoteText}>
+            * Todos os campos são obrigatórios
+          </Text>
+        </View>
 
         <TouchableOpacity
           style={[
@@ -150,7 +182,11 @@ export const AuthScreen = () => {
           disabled={isLoading}
         >
           <Text style={styles.submitButtonText}>
-            {isLoading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar conta'}
+            {isLoading
+              ? 'Processando...'
+              : isLogin
+              ? 'Fazer Login'
+              : 'Criar Minha Conta'}
           </Text>
         </TouchableOpacity>
 
@@ -159,7 +195,9 @@ export const AuthScreen = () => {
           onPress={() => setIsLogin(!isLogin)}
         >
           <Text style={styles.switchButtonText}>
-            {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entre'}
+            {isLogin
+              ? 'Ainda não tem conta? Cadastre-se aqui'
+              : 'Já possui uma conta? Faça login aqui'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -203,6 +241,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 40,
   },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  inputHelper: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    lineHeight: 18,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -210,8 +263,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    marginBottom: 16,
     backgroundColor: '#FAFAFA',
+  },
+  requiredNote: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  requiredNoteText: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
   },
   submitButton: {
     backgroundColor: '#2196F3',
