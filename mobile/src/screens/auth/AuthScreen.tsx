@@ -1,7 +1,8 @@
-import { useAppDispatch } from '@/hooks/redux';
-import { loginStart, loginSuccess } from '@/store/slices/authSlice';
+import { useAppDispatch, useAppSelector } from '@/hooks/redux';
+import { signInUser, signUpUser } from '@/store/actions/authActions';
+import { clearError } from '@/store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -19,12 +20,30 @@ export const AuthScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [name, setName] = useState('');
+  const [nativeLanguage, setNativeLanguage] = useState('pt');
 
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
+  const { isLoading, error, isAuthenticated } = useAppSelector(
+    (state) => state.auth
+  );
+
+  // Navigate to main app when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigation.navigate('MainTabs' as never);
+    }
+  }, [isAuthenticated, navigation]);
+
+  // Show error alerts
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Erro', error, [
+        { text: 'OK', onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -37,49 +56,27 @@ export const AuthScreen = () => {
       return;
     }
 
-    if (!isLogin && (!firstName || !lastName)) {
-      Alert.alert('Erro', 'Por favor, preencha seu nome completo');
+    if (!isLogin && !name) {
+      Alert.alert('Erro', 'Por favor, preencha seu nome');
       return;
     }
 
-    setIsLoading(true);
-    dispatch(loginStart());
-
     try {
-      // Simulação de login/registro
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Mock user data
-      const mockUser = {
-        id: '1',
-        email,
-        firstName: firstName || 'Usuario',
-        lastName: lastName || 'Teste',
-        currentLevel: 'A1' as const,
-        targetLevel: 'B2' as const,
-        nativeLanguage: 'pt',
-        interests: [],
-        learningStyle: 'visual' as const,
-        dailyGoal: 30,
-        studyStreak: 0,
-        totalXP: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      dispatch(
-        loginSuccess({
-          token: 'mock-jwt-token',
-          refreshToken: 'mock-refresh-token',
-          user: mockUser,
-        })
-      );
-
-      navigation.navigate('MainTabs' as never);
+      if (isLogin) {
+        await dispatch(signInUser({ email, password })).unwrap();
+      } else {
+        await dispatch(
+          signUpUser({
+            name,
+            email,
+            password,
+            nativeLanguage,
+          })
+        ).unwrap();
+      }
     } catch (error) {
-      Alert.alert('Erro', 'Falha na autenticação. Tente novamente.');
-    } finally {
-      setIsLoading(false);
+      // Error will be handled by useEffect above
+      console.error('Authentication error:', error);
     }
   };
 
@@ -106,16 +103,9 @@ export const AuthScreen = () => {
           <>
             <TextInput
               style={styles.input}
-              placeholder='Nome'
-              value={firstName}
-              onChangeText={setFirstName}
-              autoCapitalize='words'
-            />
-            <TextInput
-              style={styles.input}
-              placeholder='Sobrenome'
-              value={lastName}
-              onChangeText={setLastName}
+              placeholder='Nome completo'
+              value={name}
+              onChangeText={setName}
               autoCapitalize='words'
             />
           </>

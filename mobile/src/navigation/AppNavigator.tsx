@@ -7,6 +7,7 @@ import { Text, View } from 'react-native';
 // Import real screens
 import { AuthScreen } from '@/screens/auth/AuthScreen';
 import { OnboardingScreen } from '@/screens/onboarding/OnboardingScreen';
+import { TestConnectionScreen } from '@/screens/TestConnectionScreen';
 
 // Placeholder screens (will create proper components next)
 const DashboardScreen = () => (
@@ -100,8 +101,8 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen
         name='Profile'
-        component={ProfileScreen}
-        options={{ title: 'Perfil' }}
+        component={TestConnectionScreen}
+        options={{ title: 'Teste API' }}
       />
     </Tab.Navigator>
   );
