@@ -5,6 +5,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import services.{VocabularyService, AuthService}
 import models.VocabularyCreate
+import models.Vocabulary.vocabularyCreateFormat
 import zio.*
 import scala.concurrent.{ExecutionContext, Future}
 

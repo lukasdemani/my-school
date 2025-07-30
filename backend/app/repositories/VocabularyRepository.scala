@@ -2,14 +2,14 @@ package repositories
 
 import javax.inject._
 import models.Vocabulary
-import play.api.db.Database
+import javax.sql.DataSource
 import zio.*
 import scala.concurrent.{Future, ExecutionContext}
 import java.sql.{Connection, PreparedStatement, ResultSet}
 
 @Singleton
 class VocabularyRepository @Inject()(
-  database: Database
+  dataSource: DataSource
 )(implicit ec: ExecutionContext) {
 
   def findFiltered(
@@ -19,7 +19,8 @@ class VocabularyRepository @Inject()(
     offset: Int
   ): Future[List[Vocabulary]] = {
     val effect = ZIO.attempt {
-      database.withConnection { implicit conn =>
+      val conn = dataSource.getConnection()
+      try {
         val baseQuery = "SELECT * FROM vocabulary WHERE 1=1"
         val conditions = List(
           level.map(_ => "AND difficulty_level = ?"),
@@ -46,6 +47,8 @@ class VocabularyRepository @Inject()(
         
         val rs = stmt.executeQuery()
         extractVocabularyList(rs)
+      } finally {
+        conn.close()
       }
     }.catchAll { _ =>
       ZIO.succeed(List.empty)
@@ -58,7 +61,8 @@ class VocabularyRepository @Inject()(
 
   def findById(id: Long): Future[Option[Vocabulary]] = {
     val effect = ZIO.attempt {
-      database.withConnection { implicit conn =>
+      val conn = dataSource.getConnection()
+      try {
         val sql = "SELECT * FROM vocabulary WHERE id = ?"
         val stmt = conn.prepareStatement(sql)
         stmt.setLong(1, id)
@@ -69,6 +73,8 @@ class VocabularyRepository @Inject()(
         } else {
           None
         }
+      } finally {
+        conn.close()
       }
     }.catchAll { _ =>
       ZIO.succeed(None)
@@ -81,7 +87,8 @@ class VocabularyRepository @Inject()(
 
   def create(vocabulary: Vocabulary): Future[Vocabulary] = {
     val effect = ZIO.attempt {
-      database.withConnection { implicit conn =>
+      val conn = dataSource.getConnection()
+      try {
         val sql = """
           INSERT INTO vocabulary (
             german_word, english_translation, portuguese_translation, pronunciation,
@@ -108,6 +115,8 @@ class VocabularyRepository @Inject()(
         val rs = stmt.executeQuery()
         rs.next()
         extractVocabulary(rs)
+      } finally {
+        conn.close()
       }
     }
 
@@ -118,7 +127,8 @@ class VocabularyRepository @Inject()(
 
   def update(vocabulary: Vocabulary): Future[Option[Vocabulary]] = {
     val effect = ZIO.attempt {
-      database.withConnection { implicit conn =>
+      val conn = dataSource.getConnection()
+      try {
         val sql = """
           UPDATE vocabulary SET
             german_word = ?, english_translation = ?, portuguese_translation = ?,
@@ -149,6 +159,8 @@ class VocabularyRepository @Inject()(
         } else {
           None
         }
+      } finally {
+        conn.close()
       }
     }.catchAll { _ =>
       ZIO.succeed(None)
@@ -161,12 +173,15 @@ class VocabularyRepository @Inject()(
 
   def delete(id: Long): Future[Boolean] = {
     val effect = ZIO.attempt {
-      database.withConnection { implicit conn =>
+      val conn = dataSource.getConnection()
+      try {
         val sql = "DELETE FROM vocabulary WHERE id = ?"
         val stmt = conn.prepareStatement(sql)
         stmt.setLong(1, id)
         
         stmt.executeUpdate() > 0
+      } finally {
+        conn.close()
       }
     }.catchAll { _ =>
       ZIO.succeed(false)
@@ -179,7 +194,8 @@ class VocabularyRepository @Inject()(
 
   def findBatch(offset: Long, batchSize: Int): Future[List[Vocabulary]] = {
     val effect = ZIO.attempt {
-      database.withConnection { implicit conn =>
+      val conn = dataSource.getConnection()
+      try {
         val sql = "SELECT * FROM vocabulary ORDER BY id LIMIT ? OFFSET ?"
         val stmt = conn.prepareStatement(sql)
         stmt.setInt(1, batchSize)
@@ -187,6 +203,8 @@ class VocabularyRepository @Inject()(
         
         val rs = stmt.executeQuery()
         extractVocabularyList(rs)
+      } finally {
+        conn.close()
       }
     }.catchAll { _ =>
       ZIO.succeed(List.empty)

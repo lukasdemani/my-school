@@ -1,143 +1,178 @@
 package repositories
 
-import javax.inject._
-import models.{User, UserProfile}
-import play.api.db.Database
-import zio.*
-import scala.concurrent.{Future, ExecutionContext}
-import java.sql.{Connection, PreparedStatement, ResultSet}
+import io.getquill._
+import io.getquill.jdbczio.Quill
+import models._
+import zio._
+import java.util.UUID
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import math.Ordering.Implicits.infixOrderingOps
 
 trait UserRepository {
-  def create(user: User): ZIO[Any, DatabaseError, Option[User]]
-  def findById(id: Long): ZIO[Any, DatabaseError, Option[User]]
-  def findByEmail(email: String): ZIO[Any, DatabaseError, Option[User]]
-  def update(user: User): ZIO[Any, DatabaseError, Option[User]]
-  def delete(id: Long): ZIO[Any, DatabaseError, Boolean]
+  def create(user: User): Task[User]
+  def findByEmail(email: String): Task[Option[User]]
+  def findById(id: UUID): Task[Option[User]]
+  def update(user: User): Task[User]
+  def delete(id: UUID): Task[Boolean]
+  
+  // Workspace operations
+  def createWorkspace(workspace: LanguageWorkspace): Task[LanguageWorkspace]
+  def findWorkspacesByUserId(userId: UUID): Task[List[LanguageWorkspace]]
+  def findWorkspaceById(id: UUID): Task[Option[LanguageWorkspace]]
+  def updateWorkspace(workspace: LanguageWorkspace): Task[LanguageWorkspace]
+  def deleteWorkspace(id: UUID): Task[Boolean]
+  
+  // Progress operations
+  def createOrUpdateProgress(progress: WorkspaceProgress): Task[WorkspaceProgress]
+  def findProgressByWorkspaceId(workspaceId: UUID): Task[Option[WorkspaceProgress]]
+  
+  // Token operations
+  def saveRefreshToken(token: RefreshToken): Task[RefreshToken]
+  def findRefreshToken(token: String): Task[Option[RefreshToken]]
+  def revokeRefreshToken(token: String): Task[Boolean]
+  def revokeAllUserTokens(userId: UUID): Task[Boolean]
 }
 
-sealed trait DatabaseError extends Throwable
-case class ConnectionError(message: String) extends DatabaseError
-case class QueryError(message: String) extends DatabaseError
-case class DataMappingError(message: String) extends DatabaseError
+case class UserRepositoryLive(quill: Quill.Postgres[SnakeCase]) extends UserRepository {
+  import quill._
 
-@Singleton
-class UserRepositoryImpl @Inject()(
-  database: Database
-)(implicit ec: ExecutionContext) extends UserRepository {
-
-  def create(user: User): ZIO[Any, DatabaseError, Option[User]] = {
-    executeQuery { conn =>
-      val sql = """
-        INSERT INTO users (email, password_hash, first_name, last_name, level, native_language, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        RETURNING id, email, password_hash, first_name, last_name, level, native_language, created_at, updated_at
-      """
-      
-      val stmt = conn.prepareStatement(sql)
-      stmt.setString(1, user.email)
-      stmt.setString(2, user.passwordHash)
-      stmt.setString(3, user.firstName)
-      stmt.setString(4, user.lastName)
-      stmt.setString(5, user.level)
-      stmt.setString(6, user.nativeLanguage)
-      stmt.setTimestamp(7, java.sql.Timestamp.from(user.createdAt))
-      stmt.setTimestamp(8, java.sql.Timestamp.from(user.updatedAt))
-      
-      val rs = stmt.executeQuery()
-      if (rs.next()) Some(extractUser(rs)) else None
-    }
+  // Schema definitions
+  inline def users = quote {
+    querySchema[User]("users")
+  }
+  
+  inline def workspaces = quote {
+    querySchema[LanguageWorkspace]("language_workspaces")
+  }
+  
+  inline def progress = quote {
+    querySchema[WorkspaceProgress]("workspace_progress")
+  }
+  
+  inline def tokens = quote {
+    querySchema[RefreshToken]("refresh_tokens")
   }
 
-  def findById(id: Long): ZIO[Any, DatabaseError, Option[User]] = {
-    executeQuery { conn =>
-      val sql = "SELECT * FROM users WHERE id = ?"
-      val stmt = conn.prepareStatement(sql)
-      stmt.setLong(1, id)
-      
-      val rs = stmt.executeQuery()
-      if (rs.next()) Some(extractUser(rs)) else None
-    }
+  override def create(user: User): Task[User] = {
+    val userWithId = user.copy(id = Some(UUID.randomUUID()))
+    run(quote {
+      users.insertValue(lift(userWithId)).returning(_.id)
+    }).map(_ => userWithId)
   }
 
-  def findByEmail(email: String): ZIO[Any, DatabaseError, Option[User]] = {
-    executeQuery { conn =>
-      val sql = "SELECT * FROM users WHERE email = ?"
-      val stmt = conn.prepareStatement(sql)
-      stmt.setString(1, email)
-      
-      val rs = stmt.executeQuery()
-      if (rs.next()) Some(extractUser(rs)) else None
-    }
+  override def findByEmail(email: String): Task[Option[User]] = {
+    run(quote {
+      users.filter(_.email == lift(email))
+    }).map(_.headOption)
   }
 
-  def update(user: User): ZIO[Any, DatabaseError, Option[User]] = {
-    executeQuery { conn =>
-      val sql = """
-        UPDATE users 
-        SET first_name = ?, last_name = ?, level = ?, updated_at = ?
-        WHERE id = ?
-        RETURNING id, email, password_hash, first_name, last_name, level, native_language, created_at, updated_at
-      """
-      
-      val stmt = conn.prepareStatement(sql)
-      stmt.setString(1, user.firstName)
-      stmt.setString(2, user.lastName)
-      stmt.setString(3, user.level)
-      stmt.setTimestamp(4, java.sql.Timestamp.from(user.updatedAt))
-      stmt.setLong(5, user.id.get)
-      
-      val rs = stmt.executeQuery()
-      if (rs.next()) Some(extractUser(rs)) else None
-    }
+  override def findById(id: UUID): Task[Option[User]] = {
+    run(quote {
+      users.filter(_.id.contains(lift(id)))
+    }).map(_.headOption)
   }
 
-  def delete(id: Long): ZIO[Any, DatabaseError, Boolean] = {
-    executeQuery { conn =>
-      val sql = "DELETE FROM users WHERE id = ?"
-      val stmt = conn.prepareStatement(sql)
-      stmt.setLong(1, id)
-      
-      stmt.executeUpdate() > 0
-    }
+  override def update(user: User): Task[User] = {
+    val updatedUser = user.copy(updatedAt = Instant.now())
+    run(quote {
+      users.filter(_.id == lift(user.id)).updateValue(lift(updatedUser))
+    }).map(_ => updatedUser)
   }
 
-  private def executeQuery[A](query: Connection => A): ZIO[Any, DatabaseError, A] = {
-    ZIO.attempt {
-      database.withConnection(query)
-    }.mapError {
-      case ex: java.sql.SQLException => QueryError(s"SQL Error: ${ex.getMessage}")
-      case ex => ConnectionError(s"Database connection error: ${ex.getMessage}")
-    }
+  override def delete(id: UUID): Task[Boolean] = {
+    run(quote {
+      users.filter(_.id.contains(lift(id))).update(_.isActive -> false)
+    }).map(_ > 0)
   }
 
-  private def extractUser(rs: ResultSet): User = {
-    try {
-      User(
-        id = Some(rs.getLong("id")),
-        email = rs.getString("email"),
-        passwordHash = rs.getString("password_hash"),
-        firstName = rs.getString("first_name"),
-        lastName = rs.getString("last_name"),
-        level = rs.getString("level"),
-        nativeLanguage = rs.getString("native_language"),
-        createdAt = rs.getTimestamp("created_at").toInstant,
-        updatedAt = rs.getTimestamp("updated_at").toInstant
-      )
-    } catch {
-      case ex: Exception => throw DataMappingError(s"Failed to map user data: ${ex.getMessage}")
-    }
+  // Workspace operations
+  override def createWorkspace(workspace: LanguageWorkspace): Task[LanguageWorkspace] = {
+    val workspaceWithId = workspace.copy(id = Some(UUID.randomUUID()))
+    run(quote {
+      workspaces.insertValue(lift(workspaceWithId)).returning(_.id)
+    }).map(_ => workspaceWithId)
   }
 
-  // Legacy Future-based methods for Play Framework compatibility
-  def create(user: User): Future[Option[User]] = {
-    Unsafe.unsafe { implicit unsafe =>
-      Runtime.default.unsafe.runToFuture(create(user).mapError(_.asInstanceOf[Throwable]))
-    }
+  override def findWorkspacesByUserId(userId: UUID): Task[List[LanguageWorkspace]] = {
+    run(quote {
+      workspaces.filter(w => w.userId == lift(userId) && w.isActive)
+    })
   }
 
-  def findByEmail(email: String): Future[Option[User]] = {
-    Unsafe.unsafe { implicit unsafe =>
-      Runtime.default.unsafe.runToFuture(findByEmail(email).mapError(_.asInstanceOf[Throwable]))
-    }
+  override def findWorkspaceById(id: UUID): Task[Option[LanguageWorkspace]] = {
+    run(quote {
+      workspaces.filter(_.id.contains(lift(id)))
+    }).map(_.headOption)
   }
+
+  override def updateWorkspace(workspace: LanguageWorkspace): Task[LanguageWorkspace] = {
+    val updatedWorkspace = workspace.copy(updatedAt = Instant.now())
+    run(quote {
+      workspaces.filter(_.id == lift(workspace.id)).updateValue(lift(updatedWorkspace))
+    }).map(_ => updatedWorkspace)
+  }
+
+  override def deleteWorkspace(id: UUID): Task[Boolean] = {
+    run(quote {
+      workspaces.filter(_.id.contains(lift(id))).update(_.isActive -> false)
+    }).map(_ > 0)
+  }
+
+  // Progress operations
+  override def createOrUpdateProgress(workspaceProgress: WorkspaceProgress): Task[WorkspaceProgress] = {
+    val progressWithId = workspaceProgress.copy(
+      id = workspaceProgress.id.orElse(Some(UUID.randomUUID())),
+      updatedAt = Instant.now()
+    )
+    
+    run(quote {
+      progress.insertValue(lift(progressWithId))
+        .onConflictUpdate(_.workspaceId)(
+          (t, e) => t.totalLessonsCompleted -> e.totalLessonsCompleted,
+          (t, e) => t.totalPoints -> e.totalPoints,
+          (t, e) => t.currentStreak -> e.currentStreak,
+          (t, e) => t.longestStreak -> e.longestStreak,
+          (t, e) => t.lastActivity -> e.lastActivity,
+          (t, e) => t.updatedAt -> e.updatedAt
+        )
+    }).map(_ => progressWithId)
+  }
+
+  override def findProgressByWorkspaceId(workspaceId: UUID): Task[Option[WorkspaceProgress]] = {
+    run(quote {
+      progress.filter(_.workspaceId == lift(workspaceId))
+    }).map(_.headOption)
+  }
+
+  // Token operations
+  override def saveRefreshToken(token: RefreshToken): Task[RefreshToken] = {
+    val tokenWithId = token.copy(id = Some(UUID.randomUUID()))
+    run(quote {
+      tokens.insertValue(lift(tokenWithId))
+    }).map(_ => tokenWithId)
+  }
+
+  override def findRefreshToken(token: String): Task[Option[RefreshToken]] = {
+    run(quote {
+      tokens.filter(t => t.token == lift(token) && !t.isRevoked)
+    }).map(_.headOption.filter(_.expiresAt.isAfter(Instant.now())))
+  }
+
+  override def revokeRefreshToken(token: String): Task[Boolean] = {
+    run(quote {
+      tokens.filter(_.token == lift(token)).update(_.isRevoked -> true)
+    }).map(_ > 0)
+  }
+
+  override def revokeAllUserTokens(userId: UUID): Task[Boolean] = {
+    run(quote {
+      tokens.filter(_.userId == lift(userId)).update(_.isRevoked -> true)
+    }).map(_ > 0)
+  }
+}
+
+object UserRepositoryLive {
+  val layer: ZLayer[Quill.Postgres[SnakeCase], Nothing, UserRepository] =
+    ZLayer.fromFunction(UserRepositoryLive.apply _)
 }

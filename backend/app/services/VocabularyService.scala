@@ -96,7 +96,7 @@ class VocabularyServiceImpl @Inject()(
       ZIO.fromFuture(_ => vocabularyRepository.findBatch(offset, batchSize))
         .mapError(ex => VocabularyDatabaseError(ex.getMessage))
         .map { words =>
-          if (words.nonEmpty) Some((ZChunk.fromIterable(words), offset + batchSize))
+          if (words.nonEmpty) Some((Chunk.fromIterable(words), offset + batchSize))
           else None
         }
     }.flatMap(ZStream.fromChunk)

@@ -1,119 +1,270 @@
 package services
 
-import javax.inject._
-import models.{User, UserRegistration}
+import models.*
 import repositories.UserRepository
+import zio.*
+import java.util.{UUID, Date}
+import java.time.Instant
 import org.mindrot.jbcrypt.BCrypt
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import play.api.Configuration
-import zio.*
-import zio.json.*
-import java.time.Instant
-import java.util.Date
-import scala.concurrent.{Future, ExecutionContext}
+import java.time.temporal.ChronoUnit
 
 trait AuthService {
-  def register(registration: UserRegistration): ZIO[Any, AuthError, Option[String]]
-  def login(email: String, password: String): ZIO[Any, AuthError, Option[String]]
-  def refreshToken(token: String): ZIO[Any, AuthError, Option[String]]
-  def validateToken(token: String): ZIO[Any, AuthError, Option[Long]]
+  def signUp(request: SignUpRequest): Task[AuthResponse]
+  def signIn(request: SignInRequest): Task[AuthResponse]
+  def refreshToken(refreshToken: String): Task[AuthResponse]
+  def logout(userId: UUID, refreshToken: String): Task[Boolean]
+  def createWorkspace(userId: UUID, request: CreateWorkspaceRequest): Task[WorkspaceResponse]
+  def getUserWithWorkspaces(userId: UUID): Task[UserResponse]
 }
 
-sealed trait AuthError extends Throwable
-case class DatabaseError(message: String) extends AuthError
-case class TokenError(message: String) extends AuthError
-case class ValidationError(message: String) extends AuthError
-
-@Singleton
-class AuthServiceImpl @Inject()(
+case class AuthServiceLive(
   userRepository: UserRepository,
-  configuration: Configuration
+  jwtSecret: String = "your-secret-key", // TODO: Move to config
+  accessTokenExpirationMinutes: Int = 15,
+  refreshTokenExpirationDays: Int = 30
 ) extends AuthService {
 
-  private val jwtSecret = configuration.get[String]("jwt.secret")
-  private val jwtExpiration = configuration.get[Int]("jwt.expiration")
   private val algorithm = Algorithm.HMAC256(jwtSecret)
+  private val jwtExpiration = accessTokenExpirationMinutes * 60 // Convert to seconds
 
-  def register(registration: UserRegistration): ZIO[Any, AuthError, Option[String]] = {
+  override def signUp(request: SignUpRequest): Task[AuthResponse] = {
     for {
-      passwordHash <- hashPassword(registration.password)
+      // Verify email doesn't exist
+      existingUser <- userRepository.findByEmail(request.email)
+      _ <- ZIO.when(existingUser.isDefined)(ZIO.fail(new RuntimeException("Email already exists")))
+      
+      // Hash password
+      passwordHash = BCrypt.hashpw(request.password, BCrypt.gensalt())
+      
+      // Create user
       user = User(
-        email = registration.email,
+        name = request.name,
+        email = request.email,
         passwordHash = passwordHash,
-        firstName = registration.firstName,
-        lastName = registration.lastName,
-        nativeLanguage = registration.nativeLanguage
+        nativeLanguage = request.nativeLanguage,
+        bio = request.bio,
+        interests = request.interests
       )
-      createdUser <- ZIO.fromFuture(_ => userRepository.create(user))
-        .mapError(ex => DatabaseError(ex.getMessage))
-      token <- createdUser match {
-        case Some(u) => generateToken(u.id.get, u.email).map(Some(_))
-        case None => ZIO.succeed(None)
-      }
-    } yield token
+      
+      createdUser <- userRepository.create(user)
+      
+      // Generate tokens
+      accessToken <- generateAccessToken(createdUser.id.get)
+      refreshTokenValue = generateRefreshToken()
+      refreshTokenExpiration = Instant.now().plus(refreshTokenExpirationDays, ChronoUnit.DAYS)
+      
+      // Save refresh token
+      refreshToken = RefreshToken(
+        userId = createdUser.id.get,
+        token = refreshTokenValue,
+        expiresAt = refreshTokenExpiration
+      )
+      _ <- userRepository.saveRefreshToken(refreshToken)
+      
+      // Create user response
+      userResponse = UserResponse(
+        id = createdUser.id.get,
+        name = createdUser.name,
+        email = createdUser.email,
+        nativeLanguage = createdUser.nativeLanguage,
+        bio = createdUser.bio,
+        interests = createdUser.interests,
+        workspaces = List.empty
+      )
+      
+    } yield AuthResponse(userResponse, accessToken, refreshTokenValue)
   }
 
-  def login(email: String, password: String): ZIO[Any, AuthError, Option[String]] = {
+  override def signIn(request: SignInRequest): Task[AuthResponse] = {
     for {
-      userOpt <- ZIO.fromFuture(_ => userRepository.findByEmail(email))
-        .mapError(ex => DatabaseError(ex.getMessage))
-      token <- userOpt match {
-        case Some(user) =>
-          verifyPassword(password, user.passwordHash).flatMap { isValid =>
-            if (isValid) generateToken(user.id.get, user.email).map(Some(_))
-            else ZIO.succeed(None)
-          }
-        case None => ZIO.succeed(None)
+      // Find user by email
+      userOpt <- userRepository.findByEmail(request.email)
+      user <- ZIO.fromOption(userOpt).orElseFail(new RuntimeException("Invalid credentials"))
+      
+      // Verify password
+      _ <- ZIO.when(!BCrypt.checkpw(request.password, user.passwordHash))(
+        ZIO.fail(new RuntimeException("Invalid credentials"))
+      )
+      
+      // Revoke old tokens
+      _ <- userRepository.revokeAllUserTokens(user.id.get)
+      
+      // Generate new tokens
+      accessToken <- generateAccessToken(user.id.get)
+      refreshTokenValue = generateRefreshToken()
+      refreshTokenExpiration = Instant.now().plus(refreshTokenExpirationDays, ChronoUnit.DAYS)
+      
+      // Save refresh token
+      refreshToken = RefreshToken(
+        userId = user.id.get,
+        token = refreshTokenValue,
+        expiresAt = refreshTokenExpiration
+      )
+      _ <- userRepository.saveRefreshToken(refreshToken)
+      
+      // Get user workspaces
+      workspaces <- userRepository.findWorkspacesByUserId(user.id.get)
+      workspaceResponses <- ZIO.foreach(workspaces) { workspace =>
+        userRepository.findProgressByWorkspaceId(workspace.id.get).map { progressOpt =>
+          WorkspaceResponse(
+            id = workspace.id.get,
+            targetLanguage = workspace.targetLanguage,
+            languageLevel = workspace.languageLevel,
+            name = workspace.name,
+            description = workspace.description,
+            progress = progressOpt.map(p => WorkspaceProgressResponse(
+              totalLessonsCompleted = p.totalLessonsCompleted,
+              totalPoints = p.totalPoints,
+              currentStreak = p.currentStreak,
+              longestStreak = p.longestStreak,
+              lastActivity = p.lastActivity
+            ))
+          )
+        }
       }
-    } yield token
+      
+      userResponse = UserResponse(
+        id = user.id.get,
+        name = user.name,
+        email = user.email,
+        nativeLanguage = user.nativeLanguage,
+        bio = user.bio,
+        interests = user.interests,
+        workspaces = workspaceResponses
+      )
+      
+    } yield AuthResponse(userResponse, accessToken, refreshTokenValue)
   }
 
-  def refreshToken(token: String): ZIO[Any, AuthError, Option[String]] = {
+  override def refreshToken(refreshTokenValue: String): Task[AuthResponse] = {
     for {
-      decoded <- decodeToken(token)
-      newToken <- decoded match {
-        case Some((userId, email)) => generateToken(userId, email).map(Some(_))
-        case None => ZIO.succeed(None)
+      // Find and validate refresh token
+      tokenOpt <- userRepository.findRefreshToken(refreshTokenValue)
+      token <- ZIO.fromOption(tokenOpt).orElseFail(new RuntimeException("Invalid refresh token"))
+      
+      // Get user
+      userOpt <- userRepository.findById(token.userId)
+      user <- ZIO.fromOption(userOpt).orElseFail(new RuntimeException("User not found"))
+      
+      // Revoke old token
+      _ <- userRepository.revokeRefreshToken(refreshTokenValue)
+      
+      // Generate new tokens
+      accessToken <- generateAccessToken(user.id.get)
+      newRefreshTokenValue = generateRefreshToken()
+      refreshTokenExpiration = Instant.now().plus(refreshTokenExpirationDays, ChronoUnit.DAYS)
+      
+      // Save new refresh token
+      newRefreshToken = RefreshToken(
+        userId = user.id.get,
+        token = newRefreshTokenValue,
+        expiresAt = refreshTokenExpiration
+      )
+      _ <- userRepository.saveRefreshToken(newRefreshToken)
+      
+      // Get user with workspaces
+      userResponse <- getUserWithWorkspaces(user.id.get)
+      
+    } yield AuthResponse(userResponse, accessToken, newRefreshTokenValue)
+  }
+
+  override def logout(userId: UUID, refreshToken: String): Task[Boolean] = {
+    userRepository.revokeRefreshToken(refreshToken)
+  }
+
+  override def createWorkspace(userId: UUID, request: CreateWorkspaceRequest): Task[WorkspaceResponse] = {
+    for {
+      // Verify user exists
+      userOpt <- userRepository.findById(userId)
+      _ <- ZIO.fromOption(userOpt).orElseFail(new RuntimeException("User not found"))
+      
+      // Create workspace
+      workspace = LanguageWorkspace(
+        userId = userId,
+        targetLanguage = request.targetLanguage,
+        languageLevel = request.languageLevel,
+        name = request.name,
+        description = request.description
+      )
+      
+      createdWorkspace <- userRepository.createWorkspace(workspace)
+      
+      // Create initial progress
+      progress = WorkspaceProgress(
+        workspaceId = createdWorkspace.id.get
+      )
+      _ <- userRepository.createOrUpdateProgress(progress)
+      
+    } yield WorkspaceResponse(
+      id = createdWorkspace.id.get,
+      targetLanguage = createdWorkspace.targetLanguage,
+      languageLevel = createdWorkspace.languageLevel,
+      name = createdWorkspace.name,
+      description = createdWorkspace.description,
+      progress = Some(WorkspaceProgressResponse(
+        totalLessonsCompleted = 0,
+        totalPoints = 0,
+        currentStreak = 0,
+        longestStreak = 0,
+        lastActivity = None
+      ))
+    )
+  }
+
+  override def getUserWithWorkspaces(userId: UUID): Task[UserResponse] = {
+    for {
+      userOpt <- userRepository.findById(userId)
+      user <- ZIO.fromOption(userOpt).orElseFail(new RuntimeException("User not found"))
+      
+      workspaces <- userRepository.findWorkspacesByUserId(userId)
+      workspaceResponses <- ZIO.foreach(workspaces) { workspace =>
+        userRepository.findProgressByWorkspaceId(workspace.id.get).map { progressOpt =>
+          WorkspaceResponse(
+            id = workspace.id.get,
+            targetLanguage = workspace.targetLanguage,
+            languageLevel = workspace.languageLevel,
+            name = workspace.name,
+            description = workspace.description,
+            progress = progressOpt.map(p => WorkspaceProgressResponse(
+              totalLessonsCompleted = p.totalLessonsCompleted,
+              totalPoints = p.totalPoints,
+              currentStreak = p.currentStreak,
+              longestStreak = p.longestStreak,
+              lastActivity = p.lastActivity
+            ))
+          )
+        }
       }
-    } yield newToken
+    } yield UserResponse(
+      id = user.id.get,
+      name = user.name,
+      email = user.email,
+      nativeLanguage = user.nativeLanguage,
+      bio = user.bio,
+      interests = user.interests,
+      workspaces = workspaceResponses
+    )
   }
 
-  def validateToken(token: String): ZIO[Any, AuthError, Option[Long]] = {
-    decodeToken(token).map(_.map(_._1))
-  }
+  private def generateAccessToken(userId: UUID): Task[String] = ZIO.attempt {
+     val now = Instant.now()
+     val expiration = now.plusSeconds(accessTokenExpirationMinutes * 60L)
+     
+     JWT.create()
+       .withSubject(userId.toString)
+       .withIssuedAt(Date.from(now))
+       .withExpiresAt(Date.from(expiration))
+       .sign(Algorithm.HMAC256(jwtSecret))
+   }.mapError(ex => TokenError(s"Token generation failed: ${ex.getMessage}"))
 
-  private def hashPassword(password: String): ZIO[Any, AuthError, String] = {
-    ZIO.attempt(BCrypt.hashpw(password, BCrypt.gensalt()))
-      .mapError(ex => ValidationError(s"Password hashing failed: ${ex.getMessage}"))
+  private def generateRefreshToken(): String = {
+    UUID.randomUUID().toString
   }
+}
 
-  private def verifyPassword(password: String, hash: String): ZIO[Any, AuthError, Boolean] = {
-    ZIO.attempt(BCrypt.checkpw(password, hash))
-      .mapError(ex => ValidationError(s"Password verification failed: ${ex.getMessage}"))
-  }
-
-  private def generateToken(userId: Long, email: String): ZIO[Any, AuthError, String] = {
-    ZIO.attempt {
-      val now = Instant.now()
-      val expiration = now.plusSeconds(jwtExpiration.toLong)
-
-      JWT.create()
-        .withClaim("userId", userId)
-        .withClaim("email", email)
-        .withIssuedAt(Date.from(now))
-        .withExpiresAt(Date.from(expiration))
-        .sign(algorithm)
-    }.mapError(ex => TokenError(s"Token generation failed: ${ex.getMessage}"))
-  }
-
-  private def decodeToken(token: String): ZIO[Any, AuthError, Option[(Long, String)]] = {
-    ZIO.attempt {
-      val verifier = JWT.require(algorithm).build()
-      val decodedJWT = verifier.verify(token)
-      val userId = decodedJWT.getClaim("userId").asLong()
-      val email = decodedJWT.getClaim("email").asString()
-      Some((userId, email))
-    }.catchAll(_ => ZIO.succeed(None))
-  }
+object AuthServiceLive {
+  val layer: ZLayer[UserRepository, Nothing, AuthService] =
+    ZLayer.fromFunction(AuthServiceLive.apply(_, "your-secret-key", 15, 30))
 }

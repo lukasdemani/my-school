@@ -8,6 +8,7 @@ import org.apache.pekko.util.Timeout
 import actors.{LearningSessionActor, ConversationActor}
 import services.{AuthService, OpenAIService}
 import models.{VocabularyPracticeRequest, ConversationRequest}
+import models.Lesson.{vocabularyPracticeRequestFormat, conversationRequestFormat}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 

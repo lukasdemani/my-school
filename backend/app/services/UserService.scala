@@ -1,54 +1,45 @@
 package services
 
 import javax.inject._
-import models.{User, UserProfile}
+import models.User
 import repositories.UserRepository
 import scala.concurrent.{Future, ExecutionContext}
+import java.util.UUID
+import zio.*
 
 @Singleton
 class UserService @Inject()(
   userRepository: UserRepository
 )(implicit ec: ExecutionContext) {
 
-  def getUserProfile(userId: Long): Future[Option[UserProfile]] = {
-    userRepository.findById(userId).map {
-      case Some(user) => Some(UserProfile(
-        id = user.id.get,
-        email = user.email,
-        firstName = user.firstName,
-        lastName = user.lastName,
-        level = user.level,
-        nativeLanguage = user.nativeLanguage
-      ))
-      case None => None
+  def getUserProfile(userId: UUID): Future[Option[User]] = {
+    // Convert ZIO to Future
+    Unsafe.unsafe { implicit unsafe =>
+      Runtime.default.unsafe.runToFuture(
+        userRepository.findById(userId)
+      )
     }
   }
 
-  def updateUserProfile(userId: Long, firstName: String, lastName: String, level: String): Future[Option[UserProfile]] = {
-    userRepository.findById(userId).flatMap {
+  def updateUserProfile(userId: UUID, name: String, bio: Option[String], interests: Option[String]): Future[Option[User]] = {
+    val effect: ZIO[Any, Throwable, Option[User]] = userRepository.findById(userId).flatMap {
       case Some(user) =>
         val updatedUser = user.copy(
-          firstName = firstName,
-          lastName = lastName,
-          level = level,
+          name = name,
+          bio = bio,
+          interests = interests,
           updatedAt = java.time.Instant.now()
         )
-        userRepository.update(updatedUser).map {
-          case Some(updated) => Some(UserProfile(
-            id = updated.id.get,
-            email = updated.email,
-            firstName = updated.firstName,
-            lastName = updated.lastName,
-            level = updated.level,
-            nativeLanguage = updated.nativeLanguage
-          ))
-          case None => None
-        }
-      case None => Future.successful(None)
+        userRepository.update(updatedUser).map(Some(_))
+      case None => ZIO.succeed(None)
+    }
+
+    Unsafe.unsafe { implicit unsafe =>
+      Runtime.default.unsafe.runToFuture(effect)
     }
   }
 
-  def getUserProgress(userId: Long): Future[Map[String, Any]] = {
+  def getUserProgress(userId: UUID): Future[Map[String, Any]] = {
     // This would typically aggregate data from multiple repositories
     // For now, returning a simple structure
     Future.successful(Map(

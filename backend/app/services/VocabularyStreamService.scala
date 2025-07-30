@@ -17,7 +17,12 @@ class VocabularyStreamService @Inject()(
   def processVocabularyBatch(vocabularyIds: List[Long]): Source[Vocabulary, NotUsed] = {
     Source(vocabularyIds)
       .mapAsync(parallelism = 4) { id =>
-        vocabularyService.getWordById(id).map(_.toList)
+        // Convert ZIO to Future
+        Unsafe.unsafe { implicit unsafe =>
+          Runtime.default.unsafe.runToFuture(
+            vocabularyService.getWordById(id).map(_.toList)
+          )
+        }
       }
       .mapConcat(identity)
   }
@@ -45,7 +50,7 @@ class VocabularyStreamService @Inject()(
     limit: Int = 20
   ): Future[List[Vocabulary]] = {
     val effect = for {
-      allWords <- ZIO.fromFuture(_ => vocabularyService.getVocabulary(Some(userLevel), None, 1000, 0))
+      allWords <- vocabularyService.getVocabulary(Some(userLevel), None, 1000, 0)
       personalizedWords <- ZIO.succeed(
         allWords
           .sortBy(_ => scala.util.Random.nextDouble())
@@ -62,7 +67,12 @@ class VocabularyStreamService @Inject()(
     Flow[UserVocabularyProgress]
       .filter(_.masteryLevel < 3) // Focus on words not yet mastered
       .mapAsync(parallelism = 4) { progress =>
-        vocabularyService.getWordById(progress.vocabularyId)
+        // Convert ZIO to Future
+        Unsafe.unsafe { implicit unsafe =>
+          Runtime.default.unsafe.runToFuture(
+            vocabularyService.getWordById(progress.vocabularyId)
+          )
+        }
       }
       .collect {
         case Some(word) if word.difficultyLevel == userLevel => word

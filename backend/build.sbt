@@ -31,11 +31,8 @@ lazy val root = (project in file("."))
       "org.apache.pekko" %% "pekko-persistence-typed" % "1.0.2",
       
       // Database with ZIO
-      "dev.zio" %% "zio-sql-postgres" % "0.1.2",
       "io.getquill" %% "quill-zio" % "4.8.0",
-      "io.getquill" %% "quill-jdbc-zio" % "4.8.0",
-      
-      "org.slf4j" % "slf4j-simple" % "2.0.9"
+      "io.getquill" %% "quill-jdbc-zio" % "4.8.0"
     )
   )
 

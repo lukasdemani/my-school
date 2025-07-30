@@ -5,6 +5,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import services.OpenAIService
 import models.ConversationRequest
+import models.Lesson.conversationRequestFormat
 import zio.*
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,7 +28,7 @@ class AIController @Inject()(
           .map { response =>
             Ok(Json.obj(
               "response" -> response,
-              "conversationId" -> chatRequest.conversationId.getOrElse(System.currentTimeMillis())
+              "conversationId" -> chatRequest.conversationId.getOrElse(java.lang.System.currentTimeMillis())
             ))
           }
           .catchAll {
