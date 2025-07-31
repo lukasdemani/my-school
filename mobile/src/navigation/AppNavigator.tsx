@@ -7,7 +7,13 @@ import { Text, View } from 'react-native';
 // Import real screens
 import { AuthScreen } from '@/screens/auth/AuthScreen';
 import { OnboardingScreen } from '@/screens/onboarding/OnboardingScreen';
-import { TestConnectionScreen } from '@/screens/TestConnectionScreen';
+import { ProfileScreen } from '@/screens/profile/ProfileScreen';
+
+// Import components
+import { LoadingScreen } from '@/components/LoadingScreen';
+
+// Import hooks
+import { useAppSelector } from '@/store/hooks';
 
 // Placeholder screens (will create proper components next)
 const DashboardScreen = () => (
@@ -31,12 +37,6 @@ const PracticeScreen = () => (
 const ProgressScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <Text>Progress Screen</Text>
-  </View>
-);
-
-const ProfileScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Profile Screen</Text>
   </View>
 );
 
@@ -101,25 +101,42 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen
         name='Profile'
-        component={TestConnectionScreen}
-        options={{ title: 'Teste API' }}
+        component={ProfileScreen}
+        options={{ title: 'Perfil' }}
       />
     </Tab.Navigator>
   );
 };
 
 export const AppNavigator = () => {
+  const { isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
+
+  if (isLoading) {
+    // Show loading screen while checking authentication
+    return (
+      <NavigationContainer>
+        <LoadingScreen message='Verificando autenticação...' />
+      </NavigationContainer>
+    );
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName='Onboarding'
         screenOptions={{
           headerShown: false,
         }}
       >
-        <Stack.Screen name='Onboarding' component={OnboardingScreen} />
-        <Stack.Screen name='Auth' component={AuthScreen} />
-        <Stack.Screen name='MainTabs' component={MainTabNavigator} />
+        {isAuthenticated ? (
+          // User is authenticated, show main app
+          <Stack.Screen name='MainTabs' component={MainTabNavigator} />
+        ) : (
+          // User is not authenticated, show auth flow
+          <>
+            <Stack.Screen name='Onboarding' component={OnboardingScreen} />
+            <Stack.Screen name='Auth' component={AuthScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

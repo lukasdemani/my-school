@@ -74,22 +74,35 @@ export const refreshUserToken = createAsyncThunk<
   }
 });
 
-export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
-  'auth/logout',
-  async (_, { rejectWithValue }) => {
-    try {
-      await apiService.logout();
-
-      // Clear token and stored data
-      apiService.clearToken();
-      await TokenStorage.clearTokens();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Erro desconhecido';
-      return rejectWithValue(message);
-    }
+export const logoutUser = createAsyncThunk<
+  void,
+  void,
+  {
+    rejectValue: string;
+    state: { auth: { refreshToken: string | null } };
   }
-);
+>('auth/logout', async (_, { rejectWithValue, getState }) => {
+  try {
+    const state = getState();
+    const refreshToken = state.auth.refreshToken;
+
+    if (refreshToken) {
+      await apiService.logout(refreshToken);
+    }
+
+    // Clear token and stored data
+    apiService.clearToken();
+    await TokenStorage.clearTokens();
+  } catch (error) {
+    // Even if the backend call fails, we still want to clear local data
+    apiService.clearToken();
+    await TokenStorage.clearTokens();
+
+    const message =
+      error instanceof Error ? error.message : 'Erro desconhecido';
+    return rejectWithValue(message);
+  }
+});
 
 export const getCurrentUser = createAsyncThunk<
   UserResponse,

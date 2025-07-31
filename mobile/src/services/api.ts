@@ -56,39 +56,40 @@ class ApiService {
 
   // Authentication endpoints
   async signUp(data: SignUpRequest): Promise<AuthResponse> {
-    return this.request<AuthResponse>('/auth/signup', {
+    return this.request<AuthResponse>('/api/auth/signup', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async signIn(data: SignInRequest): Promise<AuthResponse> {
-    return this.request<AuthResponse>('/auth/signin', {
+    return this.request<AuthResponse>('/api/auth/signin', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
-    return this.request<{ accessToken: string }>('/auth/refresh', {
+    return this.request<{ accessToken: string }>('/api/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
     });
   }
 
-  async logout(): Promise<void> {
-    return this.request<void>('/auth/logout', {
+  async logout(refreshToken: string): Promise<void> {
+    return this.request<void>('/api/auth/logout', {
       method: 'POST',
+      body: JSON.stringify({ refreshToken }),
     });
   }
 
   // User endpoints
   async getCurrentUser(): Promise<UserResponse> {
-    return this.request<UserResponse>('/users/profile');
+    return this.request<UserResponse>('/api/user/profile');
   }
 
   async updateUserProfile(data: Partial<UserResponse>): Promise<UserResponse> {
-    return this.request<UserResponse>('/users/profile', {
+    return this.request<UserResponse>('/api/user/profile', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -101,14 +102,16 @@ class ApiService {
     name: string;
     description?: string;
   }) {
-    return this.request('/users/workspaces', {
+    return this.request('/api/workspaces', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async getUserWorkspaces() {
-    return this.request('/users/workspaces');
+    // Workspaces are returned with user profile
+    const user = await this.getCurrentUser();
+    return user.workspaces;
   }
 }
 

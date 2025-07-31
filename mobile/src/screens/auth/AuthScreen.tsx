@@ -1,5 +1,5 @@
-import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { signInUser, signUpUser } from '@/store/actions/authActions';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { clearError } from '@/store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';

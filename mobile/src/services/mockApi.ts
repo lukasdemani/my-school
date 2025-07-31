@@ -68,11 +68,11 @@ class MockApiService {
     };
   }
 
-  async logout(): Promise<void> {
+  async logout(refreshToken: string): Promise<void> {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    console.log('Mock Logout');
+    console.log('Mock Logout with refreshToken:', refreshToken);
   }
 
   async getCurrentUser(): Promise<UserResponse> {
