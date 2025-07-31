@@ -1,0 +1,47 @@
+# Play Framework
+logs
+target
+/.idea
+/.idea_modules
+/.classpath
+/.project
+/.settings
+/RUNNING_PID
+
+# Scala
+*.class
+*.log
+
+# SBT
+project/project/
+project/target/
+target/
+lib_managed/
+src_managed/
+project/boot/
+.history
+.cache
+.lib/
+
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+.env.development
+
+# IDE
+.vscode/
+.metals/
+.bloop/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/

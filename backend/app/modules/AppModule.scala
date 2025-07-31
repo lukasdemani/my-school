@@ -2,7 +2,7 @@ package modules
 
 import com.google.inject.{AbstractModule, Provides, Singleton}
 import repositories.{UserRepository, UserRepositoryLive}
-import services.{AuthService, AuthServiceLive, VocabularyService, VocabularyServiceImpl, OpenAIService, OpenAIServiceImpl}
+import services.{AuthService, AuthServiceLive, VocabularyService, VocabularyServiceImpl, OpenAIService, GeminiServiceImpl}
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import javax.sql.DataSource
@@ -13,7 +13,7 @@ class AppModule extends AbstractModule {
   override def configure(): Unit = {
     // Basic bindings for services that don't need complex setup
     bind(classOf[VocabularyService]).to(classOf[VocabularyServiceImpl])
-    bind(classOf[OpenAIService]).to(classOf[OpenAIServiceImpl])
+    bind(classOf[OpenAIService]).to(classOf[GeminiServiceImpl])
   }
 
   @Provides

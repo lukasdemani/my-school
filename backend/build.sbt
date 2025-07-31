@@ -9,6 +9,7 @@ lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
       guice,
+      ws, // Play WS for HTTP client
       "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.0" % Test,
       "org.postgresql" % "postgresql" % "42.7.2",
       "com.typesafe.play" %% "play-json" % "2.10.4",
